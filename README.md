@@ -183,6 +183,23 @@ location /media/ {
 }
 ```
 
+### Настройка sudo без пароля (важно!)
+
+Для автоматического выполнения команд через SSH необходимо настроить sudo без запроса пароля:
+
+```bash
+# На удаленном сервере выполните:
+sudo visudo
+
+# Добавьте строку (замените username на ваше имя пользователя):
+username ALL=(ALL) NOPASSWD: ALL
+
+# Или для конкретных команд OpenVPN:
+username ALL=(ALL) NOPASSWD: /usr/sbin/openvpn, /bin/systemctl, /usr/bin/cat /var/log/openvpn/*
+```
+
+⚠️ **Важно:** Без этой настройки мониторинг и управление серверами не будут работать!
+
 ### UFW Firewall:
 Для работы OpenVPN с UFW необходимо настроить NAT:
 ```bash
