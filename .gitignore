@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+/staticfiles/
+/media/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+!.env.example
+
+# Temporary files
+*.tmp
+*.bak
+*_old.*
+*.orig
+
+# Coverage
+htmlcov/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+
+# Documentation (development)
+MONITORING_FIXED.md
+QUICKSTART_*.md
+REFACTORING_*.md
+SSH_KEY_SETUP.md
+STRUCTURE.md
+VIRTUAL_IP_FIXED.md
+VPN_MONITORING.md

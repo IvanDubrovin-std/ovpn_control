@@ -1,0 +1,355 @@
+{% extends 'ovpn_app/base.html' %}
+
+{% block title %}Мониторинг в реальном времени{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Мониторинг в реальном времени</h2>
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-primary" onclick="toggleAutoRefresh()">
+                        <i class="fas fa-play" id="refresh-icon"></i> Авто-обновление
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" onclick="refreshAll()">
+                        <i class="fas fa-sync-alt"></i> Обновить
+                    </button>
+                </div>
+            </div>
+
+            <!-- Overall stats -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">
+                                <i class="fas fa-chart-line"></i> Общая статистика
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row text-center">
+                                <div class="col-md-2">
+                                    <h4 class="text-primary" id="total-servers">{{ servers.count }}</h4>
+                                    <p class="text-muted mb-0">Серверов</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <h4 class="text-success" id="active-connections">0</h4>
+                                    <p class="text-muted mb-0">Активных подключений</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <h4 class="text-info" id="total-data">0 MB</h4>
+                                    <p class="text-muted mb-0">Передано данных</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <h4 class="text-warning" id="total-clients">0</h4>
+                                    <p class="text-muted mb-0">Зарегистрированных клиентов</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <h4 class="text-secondary" id="avg-connection-time">0 мин</h4>
+                                    <p class="text-muted mb-0">Среднее время подключения</p>
+                                </div>
+                                <div class="col-md-2">
+                                    <h4 class="text-dark" id="system-load">-</h4>
+                                    <p class="text-muted mb-0">Загрузка системы</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Server monitoring cards -->
+            <div class="row" id="server-monitoring">
+                {% for server in servers %}
+                    <div class="col-lg-6 mb-4">
+                        <div class="card" id="server-{{ server.id }}">
+                            <div class="card-header">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="card-title mb-0">
+                                        <i class="fas fa-server"></i> {{ server.name }}
+                                    </h6>
+                                    <span class="badge bg-success" id="status-{{ server.id }}">
+                                        {{ server.status|capfirst }}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="row mb-3">
+                                    <div class="col-6">
+                                        <strong>IP:</strong> {{ server.host }}:{{ server.openvpn_port }}
+                                    </div>
+                                    <div class="col-6">
+                                        <strong>Протокол:</strong> {{ server.openvpn_protocol|upper }}
+                                    </div>
+                                </div>
+                                
+                                <!-- Server stats -->
+                                <div class="row text-center mb-3">
+                                    <div class="col-3">
+                                        <div class="border rounded p-2">
+                                            <h6 class="text-primary mb-1" id="connections-{{ server.id }}">0</h6>
+                                            <small class="text-muted">Подключений</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="border rounded p-2">
+                                            <h6 class="text-success mb-1" id="bandwidth-{{ server.id }}">0 KB/s</h6>
+                                            <small class="text-muted">Пропускная способность</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="border rounded p-2">
+                                            <h6 class="text-info mb-1" id="uptime-{{ server.id }}">-</h6>
+                                            <small class="text-muted">Время работы</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="border rounded p-2">
+                                            <h6 class="text-warning mb-1" id="load-{{ server.id }}">-</h6>
+                                            <small class="text-muted">Загрузка</small>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Active connections -->
+                                <div class="mb-3">
+                                    <h6>Активные подключения:</h6>
+                                    <div class="table-responsive" style="max-height: 200px; overflow-y: auto;">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Клиент</th>
+                                                    <th>IP</th>
+                                                    <th>Время</th>
+                                                    <th>Трафик</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="connections-table-{{ server.id }}">
+                                                <tr>
+                                                    <td colspan="4" class="text-center text-muted">
+                                                        <i class="fas fa-spinner fa-spin"></i> Загрузка...
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- Server actions -->
+                                <div class="d-flex justify-content-between">
+                                    <a href="{% url 'ovpn_app:server_detail' server.id %}" 
+                                       class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-eye"></i> Подробности
+                                    </a>
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <button type="button" class="btn btn-outline-success" 
+                                                onclick="startServer({{ server.id }})">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-warning" 
+                                                onclick="restartServer({{ server.id }})">
+                                            <i class="fas fa-redo"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-outline-danger" 
+                                                onclick="stopServer({{ server.id }})">
+                                            <i class="fas fa-stop"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% empty %}
+                    <div class="col-12">
+                        <div class="card">
+                            <div class="card-body text-center py-5">
+                                <i class="fas fa-server fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Нет запущенных серверов</h5>
+                                <p class="text-muted">Создайте и запустите OpenVPN сервер для мониторинга</p>
+                                <a href="{% url 'ovpn_app:server_create' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Создать сервер
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Status indicator -->
+<div id="connection-status" class="position-fixed bottom-0 end-0 m-3" style="z-index: 1050;">
+    <div class="alert alert-success alert-dismissible mb-0" role="alert" style="display: none;">
+        <i class="fas fa-circle text-success"></i> Подключено к серверу мониторинга
+    </div>
+</div>
+
+<script>
+let autoRefreshInterval;
+let isAutoRefreshActive = false;
+
+function toggleAutoRefresh() {
+    const icon = document.getElementById('refresh-icon');
+    const button = icon.parentElement;
+    
+    if (isAutoRefreshActive) {
+        clearInterval(autoRefreshInterval);
+        isAutoRefreshActive = false;
+        icon.className = 'fas fa-play';
+        button.classList.remove('btn-primary');
+        button.classList.add('btn-outline-primary');
+    } else {
+        startAutoRefresh();
+        isAutoRefreshActive = true;
+        icon.className = 'fas fa-pause';
+        button.classList.remove('btn-outline-primary');
+        button.classList.add('btn-primary');
+    }
+}
+
+function startAutoRefresh() {
+    refreshAll(); // Initial refresh
+    autoRefreshInterval = setInterval(refreshAll, 5000); // Refresh every 5 seconds
+}
+
+function refreshAll() {
+    updateOverallStats();
+    {% for server in servers %}
+        updateServerStats({{ server.id }});
+    {% endfor %}
+}
+
+function updateOverallStats() {
+    fetch('/api/stats/overall/')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('total-servers').textContent = data.total_servers || 0;
+            document.getElementById('active-connections').textContent = data.active_connections || 0;
+            document.getElementById('total-data').textContent = data.total_data || '0 MB';
+            document.getElementById('total-clients').textContent = data.total_clients || 0;
+            document.getElementById('avg-connection-time').textContent = data.avg_connection_time || '0 мин';
+            document.getElementById('system-load').textContent = data.system_load || '-';
+        })
+        .catch(error => {
+            console.error('Error updating overall stats:', error);
+        });
+}
+
+function updateServerStats(serverId) {
+    fetch(`/api/servers/${serverId}/stats/`)
+        .then(response => response.json())
+        .then(data => {
+            // Update server status
+            const statusBadge = document.getElementById(`status-${serverId}`);
+            statusBadge.className = `badge bg-${data.status === 'running' ? 'success' : 'danger'}`;
+            statusBadge.textContent = data.status_display || 'Unknown';
+            
+            // Update server stats
+            document.getElementById(`connections-${serverId}`).textContent = data.active_connections || 0;
+            document.getElementById(`bandwidth-${serverId}`).textContent = data.bandwidth || '0 KB/s';
+            document.getElementById(`uptime-${serverId}`).textContent = data.uptime || '-';
+            document.getElementById(`load-${serverId}`).textContent = data.load || '-';
+            
+            // Update connections table
+            const connectionsTable = document.getElementById(`connections-table-${serverId}`);
+            if (data.connections && data.connections.length > 0) {
+                connectionsTable.innerHTML = data.connections.map(conn => `
+                    <tr>
+                        <td>${conn.client_name}</td>
+                        <td><code>${conn.virtual_ip}</code></td>
+                        <td>${conn.duration}</td>
+                        <td>${conn.data_transfer}</td>
+                    </tr>
+                `).join('');
+            } else {
+                connectionsTable.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-center text-muted">Нет активных подключений</td>
+                    </tr>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error(`Error updating server ${serverId} stats:`, error);
+        });
+}
+
+function startServer(serverId) {
+    serverAction(serverId, 'start');
+}
+
+function stopServer(serverId) {
+    if (confirm('Вы уверены, что хотите остановить сервер?')) {
+        serverAction(serverId, 'stop');
+    }
+}
+
+function restartServer(serverId) {
+    if (confirm('Вы уверены, что хотите перезапустить сервер?')) {
+        serverAction(serverId, 'restart');
+    }
+}
+
+function serverAction(serverId, action) {
+    fetch(`/api/servers/${serverId}/${action}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            updateServerStats(serverId);
+            showAlert(`Сервер ${action} выполнен успешно`, 'success');
+        } else {
+            showAlert(`Ошибка: ${data.error}`, 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('Произошла ошибка при выполнении операции', 'danger');
+    });
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container-fluid');
+    container.insertBefore(alertDiv, container.firstChild);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Initialize monitoring on page load
+document.addEventListener('DOMContentLoaded', function() {
+    refreshAll();
+});
+</script>
+
+<style>
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+}
+.border {
+    border-color: #dee2e6 !important;
+}
+.table-sm th,
+.table-sm td {
+    padding: 0.25rem 0.5rem;
+}
+code {
+    font-size: 0.8em;
+}
+</style>
+{% endblock %}

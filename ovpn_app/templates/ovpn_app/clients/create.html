@@ -1,0 +1,177 @@
+{% extends 'ovpn_app/base.html' %}
+
+{% block title %}Создать клиентский сертификат{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title mb-0">Создать клиентский сертификат</h4>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.name.id_for_label }}" class="form-label">
+                                        {{ form.name.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.name }}
+                                    {% if form.name.errors %}
+                                        <div class="text-danger small">
+                                            {{ form.name.errors|join:", " }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Уникальное имя клиента для сертификата</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.email.id_for_label }}" class="form-label">
+                                        {{ form.email.label }}
+                                    </label>
+                                    {{ form.email }}
+                                    {% if form.email.errors %}
+                                        <div class="text-danger small">
+                                            {{ form.email.errors|join:", " }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Email клиента (необязательно)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.server.id_for_label }}" class="form-label">
+                                        {{ form.server.label }}
+                                        <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.server }}
+                                    {% if form.server.errors %}
+                                        <div class="text-danger small">
+                                            {{ form.server.errors|join:", " }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Сервер OpenVPN для которого создается сертификат</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.expires_at.id_for_label }}" class="form-label">
+                                        {{ form.expires_at.label }}
+                                    </label>
+                                    {{ form.expires_at }}
+                                    {% if form.expires_at.errors %}
+                                        <div class="text-danger small">
+                                            {{ form.expires_at.errors|join:", " }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="form-text">Дата истечения сертификата (необязательно)</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    {{ form.is_active.label }}
+                                </label>
+                                {% if form.is_active.errors %}
+                                    <div class="text-danger small">
+                                        {{ form.is_active.errors|join:", " }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Сертификат будет активен сразу после создания</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.common_name.id_for_label }}" class="form-label">
+                                {{ form.common_name.label }}
+                            </label>
+                            {{ form.common_name }}
+                            {% if form.common_name.errors %}
+                                <div class="text-danger small">
+                                    {{ form.common_name.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                            <div class="form-text">Common Name для сертификата (по умолчанию = имя клиента)</div>
+                        </div>
+
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors|join:", " }}
+                            </div>
+                        {% endif %}
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'ovpn_app:client_list' %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left"></i> Назад к списку
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Создать сертификат
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Info block -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-info-circle"></i> Информация о создании сертификата
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Что происходит при создании:</h6>
+                            <ul class="small">
+                                <li>Генерируется ключевая пара клиента</li>
+                                <li>Создается запрос на сертификат (CSR)</li>
+                                <li>Сертификат подписывается CA сервера</li>
+                                <li>Создается конфигурационный файл .ovpn</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>После создания вы сможете:</h6>
+                            <ul class="small">
+                                <li>Скачать конфигурационный файл</li>
+                                <li>Просмотреть детали сертификата</li>
+                                <li>Отозвать сертификат при необходимости</li>
+                                <li>Мониторить подключения клиента</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.form-label {
+    font-weight: 600;
+}
+.form-text {
+    font-size: 0.85em;
+    color: #6c757d;
+}
+.text-danger {
+    color: #dc3545 !important;
+}
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+</style>
+{% endblock %}

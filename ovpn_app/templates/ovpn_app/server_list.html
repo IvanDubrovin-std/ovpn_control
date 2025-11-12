@@ -1,0 +1,166 @@
+{% extends 'ovpn_app/base.html' %}
+
+{% block title %}Серверы OpenVPN - OpenVPN Control Panel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Серверы OpenVPN</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'ovpn_app:server_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Добавить сервер
+            </a>
+        </div>
+    </div>
+</div>
+
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Список серверов</h6>
+    </div>
+    <div class="card-body">
+        {% if servers %}
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Название</th>
+                        <th>Хост</th>
+                        <th>Порт OpenVPN</th>
+                        <th>Протокол</th>
+                        <th>Статус</th>
+                        <th>Клиентов</th>
+                        <th>Создан</th>
+                        <th>Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for server in servers %}
+                    <tr>
+                        <td>
+                            <strong>{{ server.name }}</strong>
+                            {% if server.description %}
+                            <br><small class="text-muted">{{ server.description|truncatechars:50 }}</small>
+                            {% endif %}
+                        </td>
+                        <td>{{ server.host }}</td>
+                        <td>{{ server.openvpn_port }}</td>
+                        <td>{{ server.get_openvpn_protocol_display }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if server.status == 'running' %}bg-success
+                                {% elif server.status == 'stopped' %}bg-secondary
+                                {% elif server.status == 'installing' %}bg-warning text-dark
+                                {% elif server.status == 'pending' %}bg-info text-dark
+                                {% else %}bg-danger{% endif %}">
+                                {% if server.status == 'running' %}
+                                    <i class="fas fa-play"></i> Работает
+                                {% elif server.status == 'stopped' %}
+                                    <i class="fas fa-stop"></i> Остановлен
+                                {% elif server.status == 'installing' %}
+                                    <i class="fas fa-spinner fa-spin"></i> Устанавливается
+                                {% elif server.status == 'pending' %}
+                                    <i class="fas fa-clock"></i> Ожидает
+                                {% else %}
+                                    <i class="fas fa-exclamation-triangle"></i> Ошибка
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge bg-primary">{{ server.get_client_count }}</span>
+                        </td>
+                        <td>{{ server.created_at|date:"d.m.Y" }}</td>
+                        <td>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'ovpn_app:server_detail' server.pk %}" 
+                                   class="btn btn-sm btn-outline-primary" title="Просмотр">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <a href="{% url 'ovpn_app:server_edit' server.pk %}" 
+                                   class="btn btn-sm btn-outline-secondary" title="Редактировать">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                {% if server.status == 'pending' %}
+                                <button class="btn btn-sm btn-outline-success install-btn" 
+                                        data-server-id="{{ server.pk }}" title="Установить OpenVPN">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                {% endif %}
+                                <a href="{% url 'ovpn_app:server_delete' server.pk %}" 
+                                   class="btn btn-sm btn-outline-danger" title="Удалить"
+                                   onclick="return confirm('Вы уверены, что хотите удалить этот сервер?')">
+                                    <i class="fas fa-trash"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-server fa-3x text-gray-300 mb-3"></i>
+            <h5 class="text-muted">Серверы не найдены</h5>
+            <p class="text-muted">Добавьте первый сервер OpenVPN для начала работы</p>
+            <a href="{% url 'ovpn_app:server_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Добавить сервер
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle install button clicks
+    document.querySelectorAll('.install-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            const serverId = this.dataset.serverId;
+            const button = this;
+            
+            if (confirm('Начать установку OpenVPN на этот сервер?')) {
+                button.disabled = true;
+                button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+                
+                fetch(`/api/servers/${serverId}/install/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                        'Content-Type': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.message) {
+                        alert('Установка начата: ' + data.message);
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
+                        button.disabled = false;
+                        button.innerHTML = '<i class="fas fa-download"></i>';
+                    }
+                })
+                .catch(error => {
+                    alert('Ошибка: ' + error.message);
+                    button.disabled = false;
+                    button.innerHTML = '<i class="fas fa-download"></i>';
+                });
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

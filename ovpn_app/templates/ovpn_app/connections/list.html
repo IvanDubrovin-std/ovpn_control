@@ -1,0 +1,300 @@
+{% extends 'ovpn_app/base.html' %}
+
+{% block title %}Активные подключения{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>Активные подключения</h2>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-primary" onclick="updateConnections()">
+                        <i class="fas fa-sync-alt"></i> Обновить подключения
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="location.reload()">
+                        <i class="fas fa-redo"></i> Обновить страницу
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-primary">{{ total_connections }}</h3>
+                            <p class="text-muted mb-0">Всего подключений</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-success">{{ active_connections }}</h3>
+                            <p class="text-muted mb-0">Активных</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-warning">{{ total_servers }}</h3>
+                            <p class="text-muted mb-0">Серверов</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h3 class="text-info">{{ total_data_transfer }}</h3>
+                            <p class="text-muted mb-0">Передано данных</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filter -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="get" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="server" class="form-label">Сервер</label>
+                            <select class="form-select" id="server" name="server">
+                                <option value="">Все серверы</option>
+                                {% for server in servers %}
+                                    <option value="{{ server.id }}" 
+                                            {% if request.GET.server == server.id|stringformat:"s" %}selected{% endif %}>
+                                        {{ server.name }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="status" class="form-label">Статус</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">Все статусы</option>
+                                <option value="connected" {% if request.GET.status == "connected" %}selected{% endif %}>Подключен</option>
+                                <option value="disconnected" {% if request.GET.status == "disconnected" %}selected{% endif %}>Отключен</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="client" class="form-label">Клиент</label>
+                            <input type="text" class="form-control" id="client" name="client" 
+                                   value="{{ request.GET.client }}" placeholder="Имя клиента">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary me-2">Фильтр</button>
+                            <a href="{% url 'ovpn_app:connection_list' %}" class="btn btn-outline-secondary">Сбросить</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Connections table -->
+            <div class="card">
+                <div class="card-body">
+                    {% if connections %}
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Клиент</th>
+                                        <th>Сервер</th>
+                                        <th>IP адрес</th>
+                                        <th>Время подключения</th>
+                                        <th>Статус</th>
+                                        <th>Получено</th>
+                                        <th>Отправлено</th>
+                                        <th>Длительность</th>
+                                        <th>Действия</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="connections-table">
+                                    {% for connection in connections %}
+                                        <tr data-connection-id="{{ connection.id }}">
+                                            <td>
+                                                <strong>{{ connection.client.name }}</strong>
+                                                {% if connection.client.email %}
+                                                    <br><small class="text-muted">{{ connection.client.email }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <a href="{% url 'ovpn_app:server_detail' connection.client.server.id %}">
+                                                    {{ connection.client.server.name }}
+                                                </a>
+                                            </td>
+                                            <td>
+                                                <code>{{ connection.virtual_ip }}</code>
+                                                {% if connection.client_ip %}
+                                                    <br><small class="text-muted">{{ connection.client_ip }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>{{ connection.connected_at|date:"d.m.Y H:i:s" }}</td>
+                                            <td>
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-circle"></i> Подключен
+                                                </span>
+                                            </td>
+                                            <td>{{ connection.bytes_received|filesizeformat }}</td>
+                                            <td>{{ connection.bytes_sent|filesizeformat }}</td>
+                                            <td>
+                                                <span id="duration-{{ connection.id }}">{{ connection.format_duration }}</span>
+                                            </td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-danger" 
+                                                        onclick="disconnectClient('{{ connection.id }}')"
+                                                        title="Отключить клиента">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Pagination -->
+                        {% if is_paginated %}
+                            <nav aria-label="Page navigation" class="mt-4">
+                                <ul class="pagination justify-content-center">
+                                    {% if page_obj.has_previous %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page=1{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.client %}&client={{ request.GET.client }}{% endif %}">Первая</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.client %}&client={{ request.GET.client }}{% endif %}">Предыдущая</a>
+                                        </li>
+                                    {% endif %}
+
+                                    <li class="page-item active">
+                                        <span class="page-link">
+                                            Страница {{ page_obj.number }} из {{ page_obj.paginator.num_pages }}
+                                        </span>
+                                    </li>
+
+                                    {% if page_obj.has_next %}
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.client %}&client={{ request.GET.client }}{% endif %}">Следующая</a>
+                                        </li>
+                                        <li class="page-item">
+                                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.server %}&server={{ request.GET.server }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.client %}&client={{ request.GET.client }}{% endif %}">Последняя</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            </nav>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-wifi fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">Активные подключения не найдены</h5>
+                            <p class="text-muted">Нет активных VPN подключений</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function updateConnections() {
+    const button = event.target.closest('button');
+    const originalHTML = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обновление...';
+    
+    fetch('/api/connections/update-all/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken'),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`Подключения обновлены!\n\nВсего подключений: ${data.total_connections}\nАктивных серверов: ${data.active_servers}`);
+            location.reload();
+        } else {
+            alert('Ошибка при обновлении: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Произошла ошибка при обновлении подключений');
+    })
+    .finally(() => {
+        button.disabled = false;
+        button.innerHTML = originalHTML;
+    });
+}
+
+function refreshConnections() {
+    location.reload();
+}
+
+function disconnectClient(connectionId) {
+    if (confirm('Вы уверены, что хотите отключить этого клиента?')) {
+        fetch(`/api/connections/${connectionId}/disconnect/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Ошибка при отключении клиента: ' + data.error);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Произошла ошибка при отключении клиента');
+        });
+    }
+}
+
+// Auto-refresh every 30 seconds for active connections
+setInterval(function() {
+    // Update duration counters for active connections
+    document.querySelectorAll('[id^="duration-"]').forEach(function(elem) {
+        // This is a simplified duration update - in real app you'd track time more precisely
+        const connectionId = elem.id.replace('duration-', '');
+        // Update duration display
+    });
+}, 30000);
+</script>
+
+<style>
+.table th {
+    border-top: none;
+    font-weight: 600;
+}
+.badge {
+    font-size: 0.75em;
+}
+code {
+    font-size: 0.9em;
+}
+</style>
+{% endblock %}

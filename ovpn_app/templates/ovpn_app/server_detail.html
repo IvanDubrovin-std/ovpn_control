@@ -1,0 +1,307 @@
+{% extends 'ovpn_app/base.html' %}
+{% load static %}
+
+{% block title %}{{ server.name }} - OpenVPN Control Panel{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/ssh-terminal.js' %}"></script>
+<script src="{% static 'js/server-actions.js' %}"></script>
+<script src="{% static 'js/client-management.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Hidden data attributes for JavaScript -->
+<div id="server-data" 
+     data-server-id="{{ server.pk }}"
+     data-server-host="{{ server.host }}"
+     data-server-username="{{ server.ssh_username }}"
+     data-server-port="{{ server.ssh_port }}"
+     style="display: none;"></div>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ server.name }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'ovpn_app:server_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Назад к списку
+            </a>
+            <a href="{% url 'ovpn_app:server_edit' server.pk %}" class="btn btn-primary">
+                <i class="fas fa-edit"></i> Редактировать
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Server Info Card -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Информация о сервере</h6>
+                <span class="badge 
+                    {% if server.status == 'running' %}bg-success
+                    {% elif server.status == 'stopped' %}bg-secondary
+                    {% elif server.status == 'installing' %}bg-warning text-dark
+                    {% elif server.status == 'pending' %}bg-info text-dark
+                    {% else %}bg-danger{% endif %}">
+                    {% if server.status == 'running' %}
+                        <i class="fas fa-play"></i> Работает
+                    {% elif server.status == 'stopped' %}
+                        <i class="fas fa-stop"></i> Остановлен
+                    {% elif server.status == 'installing' %}
+                        <i class="fas fa-spinner fa-spin"></i> Устанавливается
+                    {% elif server.status == 'pending' %}
+                        <i class="fas fa-clock"></i> Ожидает установки
+                    {% else %}
+                        <i class="fas fa-exclamation-triangle"></i> Ошибка
+                    {% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Хост:</strong> {{ server.host }}</p>
+                        <p><strong>SSH порт:</strong> {{ server.ssh_port }}</p>
+                        <p><strong>SSH пользователь:</strong> {{ server.ssh_username }}</p>
+                        <p><strong>SSH ключ:</strong> 
+                            {% if server.ssh_private_key %}
+                                <span class="badge bg-success"><i class="fas fa-key"></i> Установлен</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark"><i class="fas fa-exclamation-triangle"></i> Не установлен</span>
+                                <button class="btn btn-sm btn-outline-primary ms-2" onclick="generateSSHKey({{ server.pk }})">
+                                    <i class="fas fa-key"></i> Сгенерировать ключ
+                                </button>
+                            {% endif %}
+                        </p>
+                        {% if server.description %}
+                        <p><strong>Описание:</strong> {{ server.description }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>OpenVPN порт:</strong> {{ server.openvpn_port }}</p>
+                        <p><strong>Протокол:</strong> {{ server.get_openvpn_protocol_display }}</p>
+                        <p><strong>Подсеть:</strong> {{ server.server_subnet }}/{{ server.server_netmask }}</p>
+                        <p><strong>Создан:</strong> {{ server.created_at|date:"d.m.Y H:i" }}</p>
+                    </div>
+                </div>
+                
+                {% if server.status == 'pending' %}
+                <hr>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    OpenVPN еще не установлен на этом сервере. 
+                    <button class="btn btn-primary btn-sm ms-2" onclick="installOpenVPN({{ server.pk }})">
+                        <i class="fas fa-download"></i> Установить OpenVPN
+                    </button>
+                </div>
+                {% else %}
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle"></i>
+                    OpenVPN установлен. 
+                    <button class="btn btn-warning btn-sm ms-2" onclick="configureOpenVPN({{ server.pk }})">
+                        <i class="fas fa-cog"></i> Настроить сервер
+                    </button>
+                    <button class="btn btn-info btn-sm ms-2" onclick="startOpenVPN({{ server.pk }})">
+                        <i class="fas fa-play"></i> Запустить
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- SSH Terminal Card -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">SSH Терминал</h6>
+                <div class="btn-group btn-group-sm" role="group">
+                    <button class="btn btn-outline-success" onclick="connectSSH()" id="connect-btn">
+                        <i class="fas fa-play"></i> Подключиться
+                    </button>
+                    <button class="btn btn-outline-danger" onclick="disconnectSSH()" id="disconnect-btn" disabled>
+                        <i class="fas fa-stop"></i> Отключиться
+                    </button>
+                    <button class="btn btn-outline-secondary" onclick="clearTerminal()" id="clear-btn">
+                        <i class="fas fa-eraser"></i> Очистить
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="ssh-status" class="alert alert-info m-3 mb-0" style="display: none;">
+                    <i class="fas fa-info-circle"></i> <span id="status-message">Готов к подключению</span>
+                </div>
+                <div id="terminal-container" style="display: none;">
+                    <div id="terminal-output"></div>
+                    <div class="input-group" id="terminal-input-group">
+                        <span class="input-group-text">{{ server.ssh_username }}@{{ server.host }}:~$</span>
+                        <input type="text" id="terminal-input" class="form-control" placeholder="Введите команду..." disabled>
+                    </div>
+                </div>
+                <div id="terminal-placeholder" class="text-center py-5">
+                    <i class="fas fa-terminal fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">SSH Терминал</h5>
+                    <p class="text-muted">Нажмите "Подключиться" для доступа к серверу через SSH</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Clients Card -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Клиенты VPN</h6>
+                <button class="btn btn-sm btn-primary" onclick="showCreateClientModal()" id="add-client-btn">
+                    <i class="fas fa-plus"></i> Добавить клиента
+                </button>
+            </div>
+            <div class="card-body">
+                {% if server.clients.exists %}
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th>Имя</th>
+                                <th>Email</th>
+                                <th>Статус</th>
+                                <th>Создан</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clients-table-body">
+                            {% for client in server.clients.all %}
+                            <tr id="client-row-{{ client.pk }}">
+                                <td>{{ client.name }}</td>
+                                <td>{{ client.email|default:"-" }}</td>
+                                <td>
+                                    {% if client.revoked_at %}
+                                        <span class="badge bg-danger">Отозван</span>
+                                    {% else %}
+                                        <span class="badge bg-success">Активен</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ client.created_at|date:"d.m.Y H:i" }}</td>
+                                <td>
+                                    {% if not client.revoked_at %}
+                                    <button class="btn btn-sm btn-outline-primary" onclick="downloadClientConfig('{{ client.name }}')" title="Скачать конфигурацию">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="revokeClient({{ client.pk }})" title="Отозвать сертификат">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                    {% else %}
+                                    <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-3" id="no-clients-message">
+                    <i class="fas fa-users fa-2x text-gray-300 mb-2"></i>
+                    <p class="text-muted">Клиенты не найдены</p>
+                    <button class="btn btn-primary" onclick="showCreateClientModal()">
+                        <i class="fas fa-plus"></i> Добавить первого клиента
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Быстрые действия</h6>
+            </div>
+            <div class="card-body">
+                {% if server.status == 'pending' %}
+                <button class="btn btn-success btn-block mb-2" onclick="installOpenVPN({{ server.pk }})">
+                    <i class="fas fa-download"></i> Установить OpenVPN
+                </button>
+                {% else %}
+                <button class="btn btn-warning btn-block mb-2" onclick="checkStatus({{ server.pk }})">
+                    <i class="fas fa-sync"></i> Проверить статус
+                </button>
+                <button class="btn btn-primary btn-block mb-2" onclick="showCreateClientModal()">
+                    <i class="fas fa-user-plus"></i> Добавить клиента
+                </button>
+                {% endif %}
+                
+                <a href="{% url 'ovpn_app:server_edit' server.pk %}" class="btn btn-secondary btn-block mb-2">
+                    <i class="fas fa-edit"></i> Редактировать сервер
+                </a>
+                
+                <button class="btn btn-danger btn-block" onclick="confirmDelete({{ server.pk }})">
+                    <i class="fas fa-trash"></i> Удалить сервер
+                </button>
+            </div>
+        </div>
+        
+        <!-- Server Stats -->
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">Статистика</h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-right">
+                            <div class="h4 font-weight-bold text-primary">{{ server.clients.count }}</div>
+                            <div class="small text-muted">Всего клиентов</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="h4 font-weight-bold text-success">{{ active_clients_count }}</div>
+                        <div class="small text-muted">Активных</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Client Modal -->
+<div class="modal fade" id="createClientModal" tabindex="-1" aria-labelledby="createClientModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="createClientModalLabel">
+                    <i class="fas fa-user-plus"></i> Создать клиента VPN
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createClientForm">
+                    <div class="mb-3">
+                        <label for="clientName" class="form-label">Имя клиента <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="clientName" name="client_name" required 
+                               placeholder="client1" pattern="[a-zA-Z0-9_-]+" 
+                               title="Только латинские буквы, цифры, дефис и подчеркивание">
+                        <div class="form-text">Только латинские буквы, цифры, дефис и подчеркивание</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="clientEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="clientEmail" name="email" 
+                               placeholder="user@example.com">
+                        <div class="form-text">Опционально, для идентификации клиента</div>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        После создания будет сгенерирован сертификат и конфигурационный файл .ovpn
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Отмена
+                </button>
+                <button type="button" class="btn btn-primary" onclick="createClient()" id="createClientBtn">
+                    <i class="fas fa-plus"></i> Создать клиента
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

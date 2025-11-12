@@ -1,0 +1,59 @@
+{% extends 'ovpn_app/base.html' %}
+
+{% block title %}Удалить сервер - OpenVPN Control Panel{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">Удалить сервер</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'ovpn_app:server_list' %}" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Назад к списку
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-6">
+        <div class="card shadow">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Подтверждение удаления
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Внимание!</strong> Эта операция необратима.
+                </div>
+                
+                <p class="mb-3">Вы действительно хотите удалить сервер?</p>
+                
+                <div class="bg-light p-3 rounded mb-4">
+                    <h6><strong>{{ object.name }}</strong></h6>
+                    <p class="mb-1"><strong>Хост:</strong> {{ object.host }}</p>
+                    <p class="mb-1"><strong>Порт OpenVPN:</strong> {{ object.openvpn_port }}</p>
+                    {% if object.description %}
+                    <p class="mb-0"><strong>Описание:</strong> {{ object.description }}</p>
+                    {% endif %}
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'ovpn_app:server_detail' object.pk %}" class="btn btn-secondary">
+                            <i class="fas fa-times"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Удалить сервер
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
