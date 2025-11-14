@@ -999,4 +999,162 @@ def get_server_stats(request, server_id):
         }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def stop_openvpn_server(request, server_id):
+    """Stop OpenVPN server"""
+    try:
+        server = get_object_or_404(OpenVPNServer, id=server_id)
+        
+        # Create SSH credentials
+        credentials = SSHCredentials(
+            hostname=server.host,
+            port=server.ssh_port,
+            username=server.ssh_username,
+            password=server.ssh_password,
+            private_key_content=server.ssh_private_key
+        )
+        
+        # Stop OpenVPN service
+        ssh_service = SSHService()
+        
+        async def stop_service():
+            result = await ssh_service.execute_command(
+                credentials,
+                'sudo systemctl stop openvpn@server 2>/dev/null || sudo systemctl stop openvpn'
+            )
+            return result
+        
+        result = asyncio.run(stop_service())
+        
+        if result.exit_code == 0:
+            server.status = 'stopped'
+            server.save()
+            
+            # Remove all active connections
+            VPNConnection.objects.filter(client__server=server).delete()
+            
+            return Response({
+                'success': True,
+                'message': 'OpenVPN server stopped successfully'
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': f'Failed to stop server: {result.stderr}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    except Exception as e:
+        logger.error(f"Error stopping server: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def restart_openvpn_server(request, server_id):
+    """Restart OpenVPN server"""
+    try:
+        server = get_object_or_404(OpenVPNServer, id=server_id)
+        
+        # Create SSH credentials
+        credentials = SSHCredentials(
+            hostname=server.host,
+            port=server.ssh_port,
+            username=server.ssh_username,
+            password=server.ssh_password,
+            private_key_content=server.ssh_private_key
+        )
+        
+        # Restart OpenVPN service
+        ssh_service = SSHService()
+        
+        async def restart_service():
+            result = await ssh_service.execute_command(
+                credentials,
+                'sudo systemctl restart openvpn@server 2>/dev/null || sudo systemctl restart openvpn'
+            )
+            return result
+        
+        result = asyncio.run(restart_service())
+        
+        if result.exit_code == 0:
+            server.status = 'running'
+            server.save()
+            
+            # Remove old connections (they will be recreated by monitor)
+            VPNConnection.objects.filter(client__server=server).delete()
+            
+            return Response({
+                'success': True,
+                'message': 'OpenVPN server restarted successfully'
+            })
+        else:
+            return Response({
+                'success': False,
+                'error': f'Failed to restart server: {result.stderr}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            
+    except Exception as e:
+        logger.error(f"Error restarting server: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def disconnect_client(request, connection_id):
+    """Disconnect VPN client"""
+    try:
+        connection = get_object_or_404(VPNConnection, id=connection_id)
+        server = connection.client.server
+        
+        # Create SSH credentials
+        credentials = SSHCredentials(
+            hostname=server.host,
+            port=server.ssh_port,
+            username=server.ssh_username,
+            password=server.ssh_password,
+            private_key_content=server.ssh_private_key
+        )
+        
+        # Kill client connection via management interface
+        ssh_service = SSHService()
+        client_name = connection.client.name
+        
+        async def disconnect_client_async():
+            # Try to use management interface to kill client
+            # OpenVPN management interface typically on localhost:7505
+            cmd = f"echo 'kill {client_name}' | nc localhost 7505 2>/dev/null || sudo pkill -f 'openvpn.*{client_name}'"
+            result = await ssh_service.execute_command(credentials, cmd)
+            return result
+        
+        result = asyncio.run(disconnect_client_async())
+        
+        # Delete connection from database regardless of result
+        # (it will be removed on next monitor update anyway)
+        connection.delete()
+        
+        return Response({
+            'success': True,
+            'message': f'Client {client_name} disconnected successfully'
+        })
+            
+    except VPNConnection.DoesNotExist:
+        return Response({
+            'success': False,
+            'error': 'Connection not found'
+        }, status=status.HTTP_404_NOT_FOUND)
+    except Exception as e:
+        logger.error(f"Error disconnecting client: {e}")
+        return Response({
+            'success': False,
+            'error': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 
