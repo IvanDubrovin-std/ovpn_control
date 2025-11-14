@@ -131,13 +131,31 @@ python manage.py monitor_vpn --daemon --interval 30
 - **SSH:** asyncssh для удаленного управления
 - **OpenVPN:** 2.6.14 с современной криптографией
 - **Database:** SQLite (dev) / PostgreSQL (prod)
+- **Code Quality:** Black, isort, Flake8, MyPy, pytest
+- **Architecture:** SOLID principles, Clean Architecture
 
 ## Архитектура кода
+
+Проект следует принципам **SOLID**, **Clean Code** и **Clean Architecture**.
+Подробности в [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Чистая структура ✅
 - **HTML** - только разметка и данные
 - **CSS** - только стили (main.css)
 - **JavaScript** - только логика (модульный подход)
+- **Python** - строгое разделение слоев (presentation, business, data, infrastructure)
+
+### Качество кода
+```bash
+# Форматирование и проверка
+make format    # Black + isort
+make lint      # Flake8 + MyPy
+make test      # Pytest
+make quality   # Все проверки
+
+# Или через скрипт
+./check_code_quality.sh
+```
 
 ### JavaScript модули:
 - `utils.js` - общие утилиты и API функции

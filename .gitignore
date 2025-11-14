@@ -47,6 +47,15 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Black
+.black
 
 # Documentation (development)
 MONITORING_FIXED.md
