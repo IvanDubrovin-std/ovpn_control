@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}OpenVPN Control Panel{% endblock %}</title>
-    
+
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Font Awesome -->
@@ -12,7 +12,7 @@
     <!-- Custom CSS -->
     {% load static %}
     <link href="{% static 'css/main.css' %}" rel="stylesheet">
-    
+
     {% block extra_css %}{% endblock %}
 </head>
 <body>
@@ -28,38 +28,38 @@
                             OpenVPN Control
                         </h4>
                     </div>
-                    
+
                     <ul class="nav flex-column">
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}" 
+                            <a class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
                                href="{% url 'ovpn_app:dashboard' %}">
                                 <i class="fas fa-tachometer-alt"></i>
                                 Панель управления
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'server_list' %}active{% endif %}" 
+                            <a class="nav-link {% if request.resolver_match.url_name == 'server_list' %}active{% endif %}"
                                href="{% url 'ovpn_app:server_list' %}">
                                 <i class="fas fa-server"></i>
                                 Серверы
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'client_list' %}active{% endif %}" 
+                            <a class="nav-link {% if request.resolver_match.url_name == 'client_list' %}active{% endif %}"
                                href="{% url 'ovpn_app:client_list' %}">
                                 <i class="fas fa-users"></i>
                                 Клиенты
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'connection_list' %}active{% endif %}" 
+                            <a class="nav-link {% if request.resolver_match.url_name == 'connection_list' %}active{% endif %}"
                                href="{% url 'ovpn_app:connection_list' %}">
                                 <i class="fas fa-wifi"></i>
                                 Подключения
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link {% if request.resolver_match.url_name == 'monitoring' %}active{% endif %}" 
+                            <a class="nav-link {% if request.resolver_match.url_name == 'monitoring' %}active{% endif %}"
                                href="{% url 'ovpn_app:monitoring' %}">
                                 <i class="fas fa-chart-line"></i>
                                 Мониторинг
@@ -72,9 +72,9 @@
                             </a>
                         </li>
                     </ul>
-                    
+
                     <hr class="my-4">
-                    
+
                     <div class="dropdown">
                         <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">
                             <i class="fas fa-user"></i>
@@ -88,7 +88,7 @@
                     </div>
                 </div>
             </nav>
-            
+
             <!-- Main content -->
             <main class="col-md-10 ms-sm-auto content">
                 <div class="pt-3 pb-2 mb-3">
@@ -97,14 +97,14 @@
             </main>
         </div>
     </div>
-    
+
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- Custom JS -->
     {% load static %}
-    <script src="{% static 'js/utils.js' %}"></script>
-    
+    <script src="{% static 'js/utils.js' %}?v=2"></script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

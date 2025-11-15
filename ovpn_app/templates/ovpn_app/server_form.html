@@ -36,7 +36,7 @@
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
-                    
+
                     <h5>Основные настройки</h5>
                     <div class="row mb-3">
                         <div class="col-md-6">
@@ -48,15 +48,15 @@
                             {{ form.host }}
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
                         {{ form.description }}
                     </div>
-                    
+
                     <hr>
                     <h5>Подключение к серверу</h5>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="{{ form.ssh_username.id_for_label }}" class="form-label">{{ form.ssh_username.label }}</label>
@@ -67,7 +67,7 @@
                             {{ form.ssh_port }}
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="{{ form.ssh_password.id_for_label }}" class="form-label">{{ form.ssh_password.label }}</label>
@@ -79,16 +79,16 @@
                             {{ form.ssh_key_path }}
                         </div>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label for="{{ form.ssh_private_key.id_for_label }}" class="form-label">{{ form.ssh_private_key.label }}</label>
                         {{ form.ssh_private_key }}
                         <div class="form-text">Приватный SSH ключ для аутентификации (альтернатива паролю)</div>
                     </div>
-                    
+
                     <hr>
                     <h5>Настройки OpenVPN</h5>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-4">
                             <label for="{{ form.openvpn_port.id_for_label }}" class="form-label">{{ form.openvpn_port.label }}</label>
@@ -99,7 +99,7 @@
                             {{ form.openvpn_protocol }}
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="{{ form.server_subnet.id_for_label }}" class="form-label">{{ form.server_subnet.label }}</label>
@@ -110,7 +110,7 @@
                             {{ form.server_netmask }}
                         </div>
                     </div>
-                    
+
                     <div class="row mb-3">
                         <div class="col-md-6">
                             <label for="{{ form.dns1.id_for_label }}" class="form-label">{{ form.dns1.label }}</label>
@@ -123,10 +123,33 @@
                             <div class="form-text">Вторичный DNS сервер</div>
                         </div>
                     </div>
-                    
+
                     <hr>
-                    
-                    <div class="d-flex justify-content-between">
+                    <h5>STunnel (обход блокировок)</h5>
+
+                    <div class="alert alert-warning" id="stunnelWarning" style="display: none;">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <strong>STunnel работает только с TCP!</strong> Измените протокол на TCP, чтобы включить STunnel.
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                {{ form.use_stunnel }}
+                                <label class="form-check-label" for="{{ form.use_stunnel.id_for_label }}">
+                                    {{ form.use_stunnel.label }}
+                                </label>
+                            </div>
+                            <div class="form-text">Включить STunnel для маскировки под HTTPS трафик (только для TCP)</div>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="{{ form.stunnel_port.id_for_label }}" class="form-label">{{ form.stunnel_port.label }}</label>
+                            {{ form.stunnel_port }}
+                            <div class="form-text">Порт для STunnel (обычно 443)</div>
+                        </div>
+                    </div>
+
+                    <hr>                    <div class="d-flex justify-content-between">
                         <a href="{% url 'ovpn_app:server_list' %}" class="btn btn-secondary">
                             <i class="fas fa-times"></i> Отмена
                         </a>
@@ -138,7 +161,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-lg-4">
         <div class="card shadow">
             <div class="card-header py-3">
@@ -147,16 +170,16 @@
             <div class="card-body">
                 <h6>Подключение к серверу</h6>
                 <p class="small text-muted">
-                    Укажите данные для SSH подключения к серверу. 
+                    Укажите данные для SSH подключения к серверу.
                     Можно использовать пароль или SSH ключ.
                 </p>
-                
+
                 <h6>Настройки OpenVPN</h6>
                 <p class="small text-muted">
-                    Порт и протокол для OpenVPN сервера. 
+                    Порт и протокол для OpenVPN сервера.
                     Подсеть для VPN клиентов в формате 10.8.0.0.
                 </p>
-                
+
                 <div class="alert alert-info">
                     <small>
                         <i class="fas fa-info-circle"></i>
@@ -173,5 +196,38 @@
     margin-bottom: 0.5rem;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const protocolSelect = document.getElementById('{{ form.openvpn_protocol.id_for_label }}');
+    const stunnelCheckbox = document.getElementById('{{ form.use_stunnel.id_for_label }}');
+    const stunnelPortInput = document.getElementById('{{ form.stunnel_port.id_for_label }}');
+    const stunnelWarning = document.getElementById('stunnelWarning');
+
+    function updateStunnelAvailability() {
+        const protocol = protocolSelect.value;
+        const isTCP = protocol === 'tcp';
+
+        if (!isTCP) {
+            // UDP выбран - отключаем STunnel
+            stunnelCheckbox.disabled = true;
+            stunnelCheckbox.checked = false;
+            stunnelPortInput.disabled = true;
+            stunnelWarning.style.display = 'block';
+        } else {
+            // TCP выбран - включаем STunnel
+            stunnelCheckbox.disabled = false;
+            stunnelPortInput.disabled = false;
+            stunnelWarning.style.display = 'none';
+        }
+    }
+
+    // Проверяем при загрузке страницы
+    updateStunnelAvailability();
+
+    // Проверяем при изменении протокола
+    protocolSelect.addEventListener('change', updateStunnelAvailability);
+});
+</script>
 
 {% endblock %}

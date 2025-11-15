@@ -1,70 +1,100 @@
 """
 API URL configuration for OpenVPN app
+Modular structure following SOLID principles
 """
 
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from . import api_views
+
+# Import from modular API structure
+from .api import (  # ViewSets; Server management; Client management; Monitoring; Statistics
+    ClientCertificateViewSet,
+    OpenVPNServerViewSet,
+    ServerTaskViewSet,
+    check_server_status,
+    configure_openvpn,
+    create_client,
+    disconnect_client,
+    download_client_config,
+    generate_ssh_key,
+    get_overall_stats,
+    get_server_stats,
+    install_openvpn,
+    reinstall_openvpn,
+    restart_openvpn_server,
+    start_openvpn_server,
+    stop_openvpn_server,
+    sync_clients,
+    update_agent,
+    update_all_connections,
+    update_connections,
+)
+
+# Import Stunnel views
+from .api.stunnel_views import (
+    configure_stunnel,
+    restart_stunnel,
+    setup_stunnel,
+    start_stunnel,
+    stop_stunnel,
+    stunnel_status,
+)
+
+# Import Client Revocation views
+from .api.client_revocation_views import (
+    revoke_client_certificate,
+    terminate_client_connection,
+)
 
 # API router
 router = DefaultRouter()
-router.register(r'servers', api_views.OpenVPNServerViewSet)
-router.register(r'clients', api_views.ClientCertificateViewSet)
-router.register(r'tasks', api_views.ServerTaskViewSet)
+router.register(r"servers", OpenVPNServerViewSet)
+router.register(r"clients", ClientCertificateViewSet)
+router.register(r"tasks", ServerTaskViewSet)
 
 urlpatterns = [
     # DRF Router URLs
-    path('', include(router.urls)),
-    
-    # Custom API endpoints
-    path('servers/<int:server_id>/install-openvpn/', 
-         api_views.install_openvpn, 
-         name='install-openvpn'),
-    path('servers/<int:server_id>/configure-openvpn/', 
-         api_views.configure_openvpn, 
-         name='configure-openvpn'),
-    path('servers/<int:server_id>/start-openvpn/', 
-         api_views.start_openvpn_server, 
-         name='start-openvpn'),
-    path('servers/<int:server_id>/stop/', 
-         api_views.stop_openvpn_server, 
-         name='stop-openvpn'),
-    path('servers/<int:server_id>/restart/', 
-         api_views.restart_openvpn_server, 
-         name='restart-openvpn'),
-    path('servers/<int:server_id>/create-client/', 
-         api_views.create_client, 
-         name='create-client'),
-    path('servers/<int:server_id>/download-client/<str:client_name>/', 
-         api_views.download_client_config, 
-         name='download-client-config'),
-    
-    # SSH key management
-    path('servers/<int:server_id>/generate-ssh-key/',
-         api_views.generate_ssh_key,
-         name='generate-ssh-key'),
-    
-    # Server status check
-    path('servers/<int:server_id>/check-status/',
-         api_views.check_server_status,
-         name='check-server-status'),
-    
-    # Statistics
-    path('stats/overall/',
-         api_views.get_overall_stats,
-         name='overall-stats'),
-    path('servers/<int:server_id>/stats/',
-         api_views.get_server_stats,
-         name='server-stats'),
-    
-    # Connection monitoring
-    path('servers/<int:server_id>/update-connections/', 
-         api_views.update_connections, 
-         name='update-connections'),
-    path('connections/update-all/', 
-         api_views.update_all_connections, 
-         name='update-all-connections'),
-    path('connections/<int:connection_id>/disconnect/',
-         api_views.disconnect_client,
-         name='disconnect-client'),
+    path("", include(router.urls)),
+    # Server management endpoints
+    path("servers/<int:server_id>/install-openvpn/", install_openvpn, name="install-openvpn"),
+    path("servers/<int:server_id>/configure-openvpn/", configure_openvpn, name="configure-openvpn"),
+    path("servers/<int:server_id>/reinstall-openvpn/", reinstall_openvpn, name="reinstall-openvpn"),
+    path("servers/<int:server_id>/update-agent/", update_agent, name="update-agent"),
+    path("servers/<int:server_id>/start-openvpn/", start_openvpn_server, name="start-openvpn"),
+    path("servers/<int:server_id>/stop/", stop_openvpn_server, name="stop-openvpn"),
+    path("servers/<int:server_id>/restart/", restart_openvpn_server, name="restart-openvpn"),
+    path("servers/<int:server_id>/generate-ssh-key/", generate_ssh_key, name="generate-ssh-key"),
+    path("servers/<int:server_id>/check-status/", check_server_status, name="check-server-status"),
+    path("servers/<int:server_id>/sync-clients/", sync_clients, name="sync-clients"),
+    # Stunnel management endpoints
+    path("servers/<int:server_id>/stunnel/setup/", setup_stunnel, name="setup-stunnel"),
+    path("servers/<int:server_id>/stunnel/configure/", configure_stunnel, name="configure-stunnel"),
+    path("servers/<int:server_id>/stunnel/start/", start_stunnel, name="start-stunnel"),
+    path("servers/<int:server_id>/stunnel/stop/", stop_stunnel, name="stop-stunnel"),
+    path("servers/<int:server_id>/stunnel/restart/", restart_stunnel, name="restart-stunnel"),
+    path("servers/<int:server_id>/stunnel/status/", stunnel_status, name="stunnel-status"),
+    # Client management endpoints
+    path("servers/<int:server_id>/create-client/", create_client, name="create-client"),
+    path(
+        "servers/<int:server_id>/download-client/<str:client_name>/",
+        download_client_config,
+        name="download-client-config",
+    ),
+    path("clients/<int:client_id>/revoke/", revoke_client_certificate, name="revoke-client"),
+    path(
+        "clients/<int:client_id>/terminate/",
+        terminate_client_connection,
+        name="terminate-client-connection",
+    ),
+    # Statistics endpoints
+    path("stats/overall/", get_overall_stats, name="overall-stats"),
+    path("servers/<int:server_id>/stats/", get_server_stats, name="server-stats"),
+    # Connection monitoring endpoints
+    path(
+        "servers/<int:server_id>/update-connections/", update_connections, name="update-connections"
+    ),
+    path("connections/update-all/", update_all_connections, name="update-all-connections"),
+    path(
+        "connections/<int:connection_id>/disconnect/", disconnect_client, name="disconnect-client"
+    ),
 ]

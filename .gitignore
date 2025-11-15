@@ -57,7 +57,7 @@ dmypy.json
 # Black
 .black
 
-# Documentation (development)
+# Documentation (development/temporary)
 MONITORING_FIXED.md
 QUICKSTART_*.md
 REFACTORING_*.md
@@ -65,3 +65,11 @@ SSH_KEY_SETUP.md
 STRUCTURE.md
 VIRTUAL_IP_FIXED.md
 VPN_MONITORING.md
+QUALITY_*.md
+PROJECT_CLEANUP_*.md
+CODE_QUALITY_AUDIT.md
+API_MIGRATION_VERIFICATION.md
+CODING_STANDARDS.md
+DOCS_INDEX.md
+TEST_*.html
+*.ovpn

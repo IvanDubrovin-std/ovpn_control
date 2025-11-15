@@ -4,14 +4,15 @@
 {% block title %}{{ server.name }} - OpenVPN Control Panel{% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'js/ssh-terminal.js' %}"></script>
-<script src="{% static 'js/server-actions.js' %}"></script>
-<script src="{% static 'js/client-management.js' %}"></script>
+<script src="{% static 'js/ssh-terminal.js' %}?v=2"></script>
+<script src="{% static 'js/server-actions.js' %}?v=3"></script>
+<script src="{% static 'js/client-management.js' %}?v=2"></script>
+<script src="{% static 'js/stunnel-actions.js' %}?v=1"></script>
 {% endblock %}
 
 {% block content %}
 <!-- Hidden data attributes for JavaScript -->
-<div id="server-data" 
+<div id="server-data"
      data-server-id="{{ server.pk }}"
      data-server-host="{{ server.host }}"
      data-server-username="{{ server.ssh_username }}"
@@ -38,7 +39,7 @@
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                 <h6 class="m-0 font-weight-bold text-primary">Информация о сервере</h6>
-                <span class="badge 
+                <span class="badge
                     {% if server.status == 'running' %}bg-success
                     {% elif server.status == 'stopped' %}bg-secondary
                     {% elif server.status == 'installing' %}bg-warning text-dark
@@ -63,7 +64,7 @@
                         <p><strong>Хост:</strong> {{ server.host }}</p>
                         <p><strong>SSH порт:</strong> {{ server.ssh_port }}</p>
                         <p><strong>SSH пользователь:</strong> {{ server.ssh_username }}</p>
-                        <p><strong>SSH ключ:</strong> 
+                        <p><strong>SSH ключ:</strong>
                             {% if server.ssh_private_key %}
                                 <span class="badge bg-success"><i class="fas fa-key"></i> Установлен</span>
                             {% else %}
@@ -84,12 +85,12 @@
                         <p><strong>Создан:</strong> {{ server.created_at|date:"d.m.Y H:i" }}</p>
                     </div>
                 </div>
-                
+
                 {% if server.status == 'pending' %}
                 <hr>
                 <div class="alert alert-info">
                     <i class="fas fa-info-circle"></i>
-                    OpenVPN еще не установлен на этом сервере. 
+                    OpenVPN еще не установлен на этом сервере.
                     <button class="btn btn-primary btn-sm ms-2" onclick="installOpenVPN({{ server.pk }})">
                         <i class="fas fa-download"></i> Установить OpenVPN
                     </button>
@@ -97,18 +98,24 @@
                 {% else %}
                 <div class="alert alert-success">
                     <i class="fas fa-check-circle"></i>
-                    OpenVPN установлен. 
+                    OpenVPN установлен.
                     <button class="btn btn-warning btn-sm ms-2" onclick="configureOpenVPN({{ server.pk }})">
                         <i class="fas fa-cog"></i> Настроить сервер
                     </button>
                     <button class="btn btn-info btn-sm ms-2" onclick="startOpenVPN({{ server.pk }})">
                         <i class="fas fa-play"></i> Запустить
                     </button>
+                    <button class="btn btn-secondary btn-sm ms-2" onclick="updateAgent({{ server.pk }})">
+                        <i class="fas fa-sync-alt"></i> Обновить агент
+                    </button>
+                    <button class="btn btn-danger btn-sm ms-2" onclick="reinstallOpenVPN({{ server.pk }})">
+                        <i class="fas fa-redo"></i> Переустановить
+                    </button>
                 </div>
                 {% endif %}
             </div>
         </div>
-        
+
         <!-- SSH Terminal Card -->
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
@@ -148,9 +155,14 @@
         <div class="card shadow mb-4">
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                 <h6 class="m-0 font-weight-bold text-primary">Клиенты VPN</h6>
-                <button class="btn btn-sm btn-primary" onclick="showCreateClientModal()" id="add-client-btn">
-                    <i class="fas fa-plus"></i> Добавить клиента
-                </button>
+                <div>
+                    <button class="btn btn-sm btn-warning me-2" onclick="syncClients({{ server.pk }})" title="Синхронизировать клиентов с сервером">
+                        <i class="fas fa-sync"></i> Синхронизировать
+                    </button>
+                    <button class="btn btn-sm btn-primary" onclick="showCreateClientModal()" id="add-client-btn">
+                        <i class="fas fa-plus"></i> Добавить клиента
+                    </button>
+                </div>
             </div>
             <div class="card-body">
                 {% if server.clients.exists %}
@@ -206,8 +218,71 @@
                 {% endif %}
             </div>
         </div>
+
+        <!-- STunnel Card -->
+        {% if server.use_stunnel %}
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="fas fa-shield-alt"></i> STunnel (обход блокировок)
+                </h6>
+                <span class="badge {% if server.stunnel_enabled %}bg-success{% else %}bg-secondary{% endif %}">
+                    {% if server.stunnel_enabled %}
+                        <i class="fas fa-check-circle"></i> Запущен
+                    {% else %}
+                        <i class="fas fa-stop-circle"></i> Остановлен
+                    {% endif %}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <p class="small text-muted mb-2">
+                        <i class="fas fa-info-circle"></i>
+                        STunnel маскирует OpenVPN трафик под HTTPS для обхода блокировок DPI.
+                    </p>
+                    <div class="border-start border-primary border-3 ps-3 mb-3">
+                        <div class="row small">
+                            <div class="col-6 text-muted">Внешний порт:</div>
+                            <div class="col-6"><strong>{{ server.stunnel_port }}</strong></div>
+                        </div>
+                        <div class="row small">
+                            <div class="col-6 text-muted">Протокол:</div>
+                            <div class="col-6"><strong>TCP/TLS</strong></div>
+                        </div>
+                        <div class="row small">
+                            <div class="col-6 text-muted">OpenVPN порт:</div>
+                            <div class="col-6"><strong>127.0.0.1:{{ server.openvpn_port }}</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    {% if not server.stunnel_enabled %}
+                    <button class="btn btn-warning" onclick="setupStunnel({{ server.pk }})" id="setup-stunnel-btn">
+                        <i class="fas fa-cog"></i> Настроить STunnel
+                    </button>
+                    <button class="btn btn-success" onclick="startStunnel({{ server.pk }})" id="start-stunnel-btn">
+                        <i class="fas fa-play"></i> Запустить STunnel
+                    </button>
+                    {% else %}
+                    <button class="btn btn-danger" onclick="stopStunnel({{ server.pk }})" id="stop-stunnel-btn">
+                        <i class="fas fa-stop"></i> Остановить STunnel
+                    </button>
+                    <button class="btn btn-secondary" onclick="restartStunnel({{ server.pk }})" id="restart-stunnel-btn">
+                        <i class="fas fa-redo"></i> Перезапустить STunnel
+                    </button>
+                    {% endif %}
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0 small">
+                    <i class="fas fa-lightbulb"></i>
+                    <strong>Совет:</strong> После настройки STunnel клиенты подключаются к порту {{ server.stunnel_port }} вместо {{ server.openvpn_port }}.
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
-    
+
     <div class="col-lg-4">
         <!-- Quick Actions -->
         <div class="card shadow mb-4">
@@ -227,17 +302,17 @@
                     <i class="fas fa-user-plus"></i> Добавить клиента
                 </button>
                 {% endif %}
-                
+
                 <a href="{% url 'ovpn_app:server_edit' server.pk %}" class="btn btn-secondary btn-block mb-2">
                     <i class="fas fa-edit"></i> Редактировать сервер
                 </a>
-                
+
                 <button class="btn btn-danger btn-block" onclick="confirmDelete({{ server.pk }})">
                     <i class="fas fa-trash"></i> Удалить сервер
                 </button>
             </div>
         </div>
-        
+
         <!-- Server Stats -->
         <div class="card shadow mb-4">
             <div class="card-header py-3">
@@ -275,14 +350,14 @@
                 <form id="createClientForm">
                     <div class="mb-3">
                         <label for="clientName" class="form-label">Имя клиента <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control" id="clientName" name="client_name" required 
-                               placeholder="client1" pattern="[a-zA-Z0-9_-]+" 
+                        <input type="text" class="form-control" id="clientName" name="client_name" required
+                               placeholder="client1" pattern="[a-zA-Z0-9_-]+"
                                title="Только латинские буквы, цифры, дефис и подчеркивание">
                         <div class="form-text">Только латинские буквы, цифры, дефис и подчеркивание</div>
                     </div>
                     <div class="mb-3">
                         <label for="clientEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="clientEmail" name="email" 
+                        <input type="email" class="form-control" id="clientEmail" name="email"
                                placeholder="user@example.com">
                         <div class="form-text">Опционально, для идентификации клиента</div>
                     </div>
