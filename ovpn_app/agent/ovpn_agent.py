@@ -180,16 +180,13 @@ class OpenVPNAgent:
                 return False, all_output
         return True, all_output
 
-    def _build_server_config(self, port: int, protocol: str, subnet: str, netmask: str, dns_servers: List[str], use_stunnel: bool) -> str:
+    def _build_server_config(self, port: int, protocol: str, subnet: str, netmask: str, dns_servers: List[str]) -> str:
         """Build OpenVPN server configuration"""
         dns_config = "\n".join([f'push "dhcp-option DNS {dns}"' for dns in dns_servers])
-        local_directive = "local 127.0.0.1\n" if use_stunnel else ""
         exit_notify = "" if protocol == "tcp" else "explicit-exit-notify 1\n"
-        # STunnel provides TLS encryption, so disable tls-crypt when using STunnel
-        tls_crypt = "" if use_stunnel else "tls-crypt ta.key\n"
 
         return f"""
-{local_directive}port {port}
+port {port}
 proto {protocol}
 dev tun
 ca ca.crt
@@ -202,7 +199,8 @@ ifconfig-pool-persist /var/log/openvpn/ipp.txt
 push "redirect-gateway def1 bypass-dhcp"
 {dns_config}
 keepalive 10 120
-{tls_crypt}cipher AES-256-GCM
+tls-crypt ta.key
+cipher AES-256-GCM
 auth SHA256
 management localhost 7505
 management-client-auth
@@ -231,11 +229,10 @@ verb 3
         commands = [
             ("sudo apt update -y", "Updating package list"),
             (
-                "sudo DEBIAN_FRONTEND=noninteractive apt install -y openvpn easy-rsa netcat-openbsd stunnel4",
+                "sudo DEBIAN_FRONTEND=noninteractive apt install -y openvpn easy-rsa netcat-openbsd",
                 "Installing packages",
             ),
             ("sudo systemctl enable openvpn", "Enabling OpenVPN service"),
-            ("sudo systemctl enable stunnel4", "Enabling STunnel service"),
             ("sudo mkdir -p /etc/openvpn", "Creating directories"),
             ("sudo mkdir -p /var/log/openvpn", "Creating log directory"),
         ]
@@ -276,7 +273,6 @@ verb 3
         subnet: str = "10.8.0.0",
         netmask: str = "255.255.255.0",
         dns_servers: Optional[List[str]] = None,
-        use_stunnel: bool = False,
     ) -> TaskResult:
         """
         Configure OpenVPN server
@@ -288,7 +284,6 @@ verb 3
             subnet: VPN subnet
             netmask: VPN netmask
             dns_servers: List of DNS servers
-            use_stunnel: Use Stunnel tunneling
 
         Returns:
             TaskResult
@@ -317,7 +312,7 @@ verb 3
 
         # Create server configuration
         self.report_progress(task_id, 90, "Creating server configuration")
-        server_config = self._build_server_config(port, protocol, subnet, netmask, dns_servers, use_stunnel)
+        server_config = self._build_server_config(port, protocol, subnet, netmask, dns_servers)
 
         # Write config file
         config_path = "/tmp/server.conf"
@@ -394,7 +389,6 @@ verb 3
             subnet=config.get("subnet", "10.8.0.0"),
             netmask=config.get("netmask", "255.255.255.0"),
             dns_servers=config.get("dns_servers", ["8.8.8.8", "8.8.4.4"]),
-            use_stunnel=config.get("use_stunnel", False),
         )
 
         if config_result.status != TaskStatus.SUCCESS:
@@ -595,7 +589,6 @@ verb 3
         server_host = config.get("server_host", "")
         server_port = config.get("port", 1194)
         protocol = config.get("protocol", "udp")
-        use_stunnel = config.get("use_stunnel", False)
         cipher = config.get("cipher", "AES-256-GCM")
         auth = config.get("auth", "SHA256")
 
@@ -623,8 +616,8 @@ verb 3
             "</key>",
         ]
 
-        # Only add tls-crypt if NOT using STunnel (STunnel provides TLS encryption)
-        if ta_key and not use_stunnel:
+        # Add tls-crypt key if available
+        if ta_key:
             ovpn_config_parts.extend([
                 "<tls-crypt>",
                 ta_key,
@@ -952,7 +945,6 @@ def main():
                 subnet=config.get("subnet", "10.8.0.0"),
                 netmask=config.get("netmask", "255.255.255.0"),
                 dns_servers=config.get("dns_servers"),
-                use_stunnel=config.get("use_stunnel", False),
             )
         elif args.command == "reinstall":
             result = agent.reinstall_openvpn(args.task_id, config)

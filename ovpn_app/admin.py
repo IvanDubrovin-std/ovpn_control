@@ -78,12 +78,11 @@ class OpenVPNServerAdmin(admin.ModelAdmin):
         "status",
         "openvpn_port",
         "openvpn_protocol",
-        "use_stunnel_display",
         "client_count",
         "last_check",
         "created_at",
     ]
-    list_filter = ["status", "openvpn_protocol", "use_stunnel", "created_at"]
+    list_filter = ["status", "openvpn_protocol", "created_at"]
     search_fields = ["name", "host", "description"]
     readonly_fields = ["created_at", "updated_at", "last_check", "ssh_key_display"]
 
@@ -116,34 +115,10 @@ class OpenVPNServerAdmin(admin.ModelAdmin):
             },
         ),
         (
-            "Stunnel настройки",
-            {
-                "fields": ("use_stunnel", "stunnel_port", "stunnel_enabled"),
-                "classes": ("collapse",),
-            },
-        ),
-        (
             "Метаданные",
             {"fields": ("created_at", "updated_at", "last_check"), "classes": ("collapse",)},
         ),
     )
-
-    def use_stunnel_display(self, obj):
-        if obj.use_stunnel:
-            status_text = "✓ Включен"
-            if obj.stunnel_enabled:
-                return format_html(
-                    '<span style="color: green;">{}</span> (порт: {})',
-                    status_text,
-                    obj.stunnel_port,
-                )
-            else:
-                return format_html(
-                    '<span style="color: orange;">{}</span> (не запущен)', status_text
-                )
-        return format_html('<span style="color: gray;">✗ Отключен</span>')
-
-    use_stunnel_display.short_description = "Stunnel"  # type: ignore[attr-defined]
 
     def ssh_key_display(self, obj):
         """Display SSH key status without showing the actual key"""

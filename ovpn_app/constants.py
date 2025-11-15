@@ -49,44 +49,6 @@ class OpenVPNServices:
 
 
 @dataclass(frozen=True)
-class StunnelConfig:
-    """Stunnel configuration constants"""
-
-    # Default ports
-    DEFAULT_PORT: Final[int] = 443
-    DEFAULT_OPENVPN_PORT: Final[int] = 1194
-
-    # Paths
-    CONFIG_DIR: Final[str] = "/etc/stunnel"
-    CONFIG_FILE: Final[str] = "/etc/stunnel/stunnel.conf"
-    LOG_DIR: Final[str] = "/var/log/stunnel4"
-    LOG_FILE: Final[str] = "/var/log/stunnel4/stunnel.log"
-    # Use existing /run/stunnel4/ directory created by package
-    PID_FILE: Final[str] = "/run/stunnel4/stunnel4.pid"
-
-    # Certificate paths
-    CERT_FILE: Final[str] = "/etc/stunnel/stunnel.pem"
-    KEY_FILE: Final[str] = "/etc/stunnel/stunnel.key"
-    CA_FILE: Final[str] = "/etc/stunnel/ca.crt"
-
-    # Service
-    SERVICE_NAME: Final[str] = "stunnel4"
-    SYSTEMD_UNIT: Final[str] = "stunnel4.service"
-
-    # Configuration
-    DEFAULT_CIPHER: Final[str] = "HIGH:!aNULL:!MD5"
-    DEFAULT_PROTOCOL: Final[str] = "TLSv1.2"
-    TLS_OPTIONS: Final[str] = "NO_SSLv2\noptions = NO_SSLv3"
-
-    # Service options
-    FOREGROUND_MODE: Final[bool] = False
-    DEBUG_LEVEL: Final[int] = 5  # 0-7 scale
-
-    # Connection limits
-    MAX_CONNECTIONS: Final[int] = 100
-
-
-@dataclass(frozen=True)
 class OpenVPNDefaults:
     """OpenVPN default configuration values"""
 
@@ -193,13 +155,6 @@ class ErrorMessages:
     OPENVPN_CONFIG_FAILED: Final[str] = "Не удалось настроить OpenVPN"
     OPENVPN_START_FAILED: Final[str] = "Не удалось запустить OpenVPN сервис"
 
-    # Stunnel errors
-    STUNNEL_NOT_INSTALLED: Final[str] = "Stunnel не установлен на сервере"
-    STUNNEL_INSTALL_FAILED: Final[str] = "Не удалось установить Stunnel"
-    STUNNEL_CONFIG_FAILED: Final[str] = "Не удалось настроить Stunnel"
-    STUNNEL_START_FAILED: Final[str] = "Не удалось запустить Stunnel сервис"
-    STUNNEL_CERT_GENERATION_FAILED: Final[str] = "Не удалось создать сертификат для Stunnel"
-
     # Certificate errors
     CERT_GENERATION_FAILED: Final[str] = "Не удалось создать сертификат"
     CERT_REVOCATION_FAILED: Final[str] = "Не удалось отозвать сертификат"
@@ -233,12 +188,6 @@ class SuccessMessages:
     OPENVPN_STOPPED: Final[str] = "OpenVPN сервис остановлен"
     OPENVPN_RESTARTED: Final[str] = "OpenVPN сервис перезапущен"
 
-    STUNNEL_INSTALLED: Final[str] = "Stunnel успешно установлен"
-    STUNNEL_CONFIGURED: Final[str] = "Stunnel успешно настроен"
-    STUNNEL_STARTED: Final[str] = "Stunnel сервис запущен"
-    STUNNEL_STOPPED: Final[str] = "Stunnel сервис остановлен"
-    STUNNEL_RESTARTED: Final[str] = "Stunnel сервис перезапущен"
-
     CERT_CREATED: Final[str] = "Сертификат успешно создан"
     CERT_REVOKED: Final[str] = "Сертификат успешно отозван"
 
@@ -252,7 +201,6 @@ __all__ = [
     "SSHConfig",
     "OpenVPNPaths",
     "OpenVPNServices",
-    "StunnelConfig",
     "OpenVPNDefaults",
     "CertificateConfig",
     "TaskConfig",

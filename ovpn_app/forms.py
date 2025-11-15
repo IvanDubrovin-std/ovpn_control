@@ -45,8 +45,6 @@ class ServerForm(forms.ModelForm):
             "openvpn_protocol",
             "server_subnet",
             "server_netmask",
-            "use_stunnel",
-            "stunnel_port",
         ]
         widgets = {
             "name": forms.TextInput(attrs={"class": "form-control"}),
@@ -67,10 +65,6 @@ class ServerForm(forms.ModelForm):
             "openvpn_protocol": forms.Select(attrs={"class": "form-select"}),
             "server_subnet": forms.TextInput(attrs={"class": "form-control"}),
             "server_netmask": forms.TextInput(attrs={"class": "form-control"}),
-            "use_stunnel": forms.CheckboxInput(attrs={"class": "form-check-input"}),
-            "stunnel_port": forms.NumberInput(
-                attrs={"class": "form-control", "placeholder": "443"}
-            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -109,19 +103,10 @@ class ServerForm(forms.ModelForm):
             raise forms.ValidationError("OpenVPN порт должен быть от 1 до 65535.")
         return port
 
-    def clean_stunnel_port(self):
-        """Validate Stunnel port"""
-        port = self.cleaned_data.get("stunnel_port")
-        if port and (port < 1 or port > 65535):
-            raise forms.ValidationError("Stunnel порт должен быть от 1 до 65535.")
-        return port
-
     def clean(self):
         cleaned_data = super().clean()
         ssh_password = cleaned_data.get("ssh_password")
         ssh_key_path = cleaned_data.get("ssh_key_path")
-        use_stunnel = cleaned_data.get("use_stunnel")
-        stunnel_port = cleaned_data.get("stunnel_port")
 
         # Check if server already has private key stored
         if self.instance and self.instance.pk and self.instance.ssh_private_key:
@@ -131,10 +116,6 @@ class ServerForm(forms.ModelForm):
             raise forms.ValidationError(
                 "Необходимо указать либо SSH пароль, либо путь к SSH ключу."
             )
-
-        # Validate Stunnel configuration
-        if use_stunnel and not stunnel_port:
-            raise forms.ValidationError("При использовании Stunnel необходимо указать порт.")
 
         return cleaned_data
 

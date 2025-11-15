@@ -7,7 +7,6 @@
 <script src="{% static 'js/ssh-terminal.js' %}?v=2"></script>
 <script src="{% static 'js/server-actions.js' %}?v=3"></script>
 <script src="{% static 'js/client-management.js' %}?v=2"></script>
-<script src="{% static 'js/stunnel-actions.js' %}?v=1"></script>
 {% endblock %}
 
 {% block content %}
@@ -219,68 +218,7 @@
             </div>
         </div>
 
-        <!-- STunnel Card -->
-        {% if server.use_stunnel %}
-        <div class="card shadow mb-4">
-            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                <h6 class="m-0 font-weight-bold text-primary">
-                    <i class="fas fa-shield-alt"></i> STunnel (обход блокировок)
-                </h6>
-                <span class="badge {% if server.stunnel_enabled %}bg-success{% else %}bg-secondary{% endif %}">
-                    {% if server.stunnel_enabled %}
-                        <i class="fas fa-check-circle"></i> Запущен
-                    {% else %}
-                        <i class="fas fa-stop-circle"></i> Остановлен
-                    {% endif %}
-                </span>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <p class="small text-muted mb-2">
-                        <i class="fas fa-info-circle"></i>
-                        STunnel маскирует OpenVPN трафик под HTTPS для обхода блокировок DPI.
-                    </p>
-                    <div class="border-start border-primary border-3 ps-3 mb-3">
-                        <div class="row small">
-                            <div class="col-6 text-muted">Внешний порт:</div>
-                            <div class="col-6"><strong>{{ server.stunnel_port }}</strong></div>
-                        </div>
-                        <div class="row small">
-                            <div class="col-6 text-muted">Протокол:</div>
-                            <div class="col-6"><strong>TCP/TLS</strong></div>
-                        </div>
-                        <div class="row small">
-                            <div class="col-6 text-muted">OpenVPN порт:</div>
-                            <div class="col-6"><strong>127.0.0.1:{{ server.openvpn_port }}</strong></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="d-grid gap-2">
-                    {% if not server.stunnel_enabled %}
-                    <button class="btn btn-warning" onclick="setupStunnel({{ server.pk }})" id="setup-stunnel-btn">
-                        <i class="fas fa-cog"></i> Настроить STunnel
-                    </button>
-                    <button class="btn btn-success" onclick="startStunnel({{ server.pk }})" id="start-stunnel-btn">
-                        <i class="fas fa-play"></i> Запустить STunnel
-                    </button>
-                    {% else %}
-                    <button class="btn btn-danger" onclick="stopStunnel({{ server.pk }})" id="stop-stunnel-btn">
-                        <i class="fas fa-stop"></i> Остановить STunnel
-                    </button>
-                    <button class="btn btn-secondary" onclick="restartStunnel({{ server.pk }})" id="restart-stunnel-btn">
-                        <i class="fas fa-redo"></i> Перезапустить STunnel
-                    </button>
-                    {% endif %}
-                </div>
-
-                <div class="alert alert-info mt-3 mb-0 small">
-                    <i class="fas fa-lightbulb"></i>
-                    <strong>Совет:</strong> После настройки STunnel клиенты подключаются к порту {{ server.stunnel_port }} вместо {{ server.openvpn_port }}.
-                </div>
-            </div>
-        </div>
-        {% endif %}
+        <!-- OpenVPN Management Actions -->
     </div>
 
     <div class="col-lg-4">

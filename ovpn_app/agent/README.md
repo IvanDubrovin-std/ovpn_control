@@ -82,8 +82,7 @@ ovpn-agent reinstall --task-id task-003 --config /tmp/config.json
   "protocol": "udp",
   "subnet": "10.8.0.0",
   "netmask": "255.255.255.0",
-  "dns_servers": ["8.8.8.8", "8.8.4.4"],
-  "use_stunnel": false
+  "dns_servers": ["8.8.8.8", "8.8.4.4"]
 }
 ```
 

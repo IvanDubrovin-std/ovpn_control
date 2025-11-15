@@ -48,21 +48,6 @@ class OpenVPNServer(models.Model):
         default=list, verbose_name="DNS серверы", help_text="Список DNS серверов в формате JSON"
     )
 
-    # Stunnel configuration (for TCP tunneling)
-    use_stunnel = models.BooleanField(
-        default=False,
-        verbose_name="Использовать Stunnel",
-        help_text="Включить Stunnel для OpenVPN через TCP/TLS",
-    )
-    stunnel_port = models.PositiveIntegerField(
-        default=443,
-        verbose_name="Stunnel порт",
-        help_text="Внешний порт для подключения клиентов через Stunnel",
-    )
-    stunnel_enabled = models.BooleanField(
-        default=False, verbose_name="Stunnel активен", help_text="Stunnel сервис запущен"
-    )
-
     # Server status
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default="pending", verbose_name="Статус"

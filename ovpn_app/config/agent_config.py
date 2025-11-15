@@ -17,7 +17,6 @@ class AgentConfig:
     subnet: str
     netmask: str
     dns_servers: List[str] = field(default_factory=lambda: ["8.8.8.8", "8.8.4.4"])
-    use_stunnel: bool = False
 
     # Optional advanced settings
     cipher: str = "AES-256-GCM"
@@ -34,7 +33,6 @@ class AgentConfig:
             "subnet": self.subnet,
             "netmask": self.netmask,
             "dns_servers": self.dns_servers,
-            "use_stunnel": self.use_stunnel,
             "cipher": self.cipher,
             "auth": self.auth,
             "keepalive_ping": self.keepalive_ping,
@@ -51,5 +49,4 @@ class AgentConfig:
             subnet=server.server_subnet,
             netmask=server.server_netmask,
             dns_servers=server.get_dns_servers_list(),
-            use_stunnel=server.use_stunnel,
         )

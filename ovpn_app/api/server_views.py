@@ -135,7 +135,6 @@ def configure_openvpn(request, server_id: int) -> Response:
             "subnet": request.data.get("subnet", server.server_subnet),
             "netmask": request.data.get("netmask", server.server_netmask),
             "dns_servers": request.data.get("dns_servers", server.get_dns_servers_list()),
-            "use_stunnel": server.use_stunnel,  # Pass Stunnel flag to configurator
         }
 
         # Initialize services
@@ -574,7 +573,6 @@ def reinstall_openvpn(request, server_id: int) -> Response:
                 "subnet": server.server_subnet,
                 "netmask": server.server_netmask,
                 "dns_servers": server.get_dns_servers_list(),
-                "use_stunnel": server.use_stunnel,
             }
 
             result = await agent_client.reinstall_openvpn(credentials, task_id, config)

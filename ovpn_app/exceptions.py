@@ -142,70 +142,6 @@ class OpenVPNServiceError(OpenVPNError):
 
 
 # ============================================================================
-# Stunnel Exceptions
-# ============================================================================
-
-
-class StunnelError(OpenVPNAppError):
-    """Base exception for Stunnel-related errors"""
-
-
-class StunnelNotInstalledError(StunnelError):
-    """Raised when Stunnel is not installed on server"""
-
-    def __init__(self, server_name: str):
-        self.server_name = server_name
-        super().__init__(
-            f"Stunnel is not installed on server '{server_name}'", ErrorSeverity.WARNING
-        )
-
-
-class StunnelInstallationError(StunnelError):
-    """Raised when Stunnel installation fails"""
-
-    def __init__(self, server_name: str, reason: str = ""):
-        self.server_name = server_name
-        message = f"Failed to install Stunnel on server '{server_name}'"
-        if reason:
-            message += f": {reason}"
-        super().__init__(message, ErrorSeverity.ERROR)
-
-
-class StunnelConfigurationError(StunnelError):
-    """Raised when Stunnel configuration fails"""
-
-    def __init__(self, server_name: str, reason: str = ""):
-        self.server_name = server_name
-        message = f"Failed to configure Stunnel on server '{server_name}'"
-        if reason:
-            message += f": {reason}"
-        super().__init__(message, ErrorSeverity.ERROR)
-
-
-class StunnelServiceError(StunnelError):
-    """Raised when Stunnel service operations fail"""
-
-    def __init__(self, server_name: str, operation: str, reason: str = ""):
-        self.server_name = server_name
-        self.operation = operation
-        message = f"Failed to {operation} Stunnel on server '{server_name}'"
-        if reason:
-            message += f": {reason}"
-        super().__init__(message, ErrorSeverity.ERROR)
-
-
-class StunnelCertificateError(StunnelError):
-    """Raised when Stunnel certificate operations fail"""
-
-    def __init__(self, server_name: str, reason: str = ""):
-        self.server_name = server_name
-        message = f"Stunnel certificate error on server '{server_name}'"
-        if reason:
-            message += f": {reason}"
-        super().__init__(message, ErrorSeverity.ERROR)
-
-
-# ============================================================================
 # Certificate Exceptions
 # ============================================================================
 
@@ -424,13 +360,6 @@ __all__ = [
     "OpenVPNInstallationError",
     "OpenVPNConfigurationError",
     "OpenVPNServiceError",
-    # Stunnel
-    "StunnelError",
-    "StunnelNotInstalledError",
-    "StunnelInstallationError",
-    "StunnelConfigurationError",
-    "StunnelServiceError",
-    "StunnelCertificateError",
     # Certificates
     "CertificateError",
     "CertificateGenerationError",

@@ -167,18 +167,6 @@ class OpenVPNConfigurator:
         subnet = server_config.get("subnet", "10.8.0.0")
         netmask = server_config.get("netmask", "255.255.255.0")
         dns_servers = server_config.get("dns_servers", ["8.8.8.8", "8.8.4.4"])
-        use_stunnel = server_config.get("use_stunnel", False)
-
-        # If Stunnel is enabled, configure OpenVPN for local-only TCP
-        if use_stunnel:
-            # OpenVPN listens on localhost only when behind Stunnel
-            bind_address = "127.0.0.1"
-            protocol = "tcp"  # Stunnel requires TCP
-            logger.info("Stunnel mode enabled: OpenVPN will listen on localhost:1194 TCP")
-        else:
-            # Normal mode: listen on all interfaces
-            bind_address = "0.0.0.0"
-            logger.info(f"Normal mode: OpenVPN will listen on {bind_address}:{port} {protocol}")
 
         # Build full path to user's home directory
         # Use current directory instead of absolute path to avoid permission issues
@@ -188,9 +176,6 @@ class OpenVPNConfigurator:
         for dns in dns_servers:
             dns_push_lines.append(f'push "dhcp-option DNS {dns}"')
         dns_config = "\n".join(dns_push_lines)
-
-        # Build local bind directive
-        local_directive = f"local {bind_address}\n" if use_stunnel else ""
 
         # explicit-exit-notify only for UDP
         exit_notify = "" if protocol == "tcp" else "explicit-exit-notify 1\n"
@@ -226,7 +211,6 @@ class OpenVPNConfigurator:
             "sudo chmod 644 /etc/openvpn/crl.pem",
             # Step 11: Create server config in /etc/openvpn/server.conf
             f"sudo tee /etc/openvpn/server.conf > /dev/null << 'EOF'\n"
-            f"{local_directive}"
             f"port {port}\n"
             f"proto {protocol}\n"
             f"dev tun\n"

@@ -30,16 +30,6 @@ from .api import (  # ViewSets; Server management; Client management; Monitoring
     update_connections,
 )
 
-# Import Stunnel views
-from .api.stunnel_views import (
-    configure_stunnel,
-    restart_stunnel,
-    setup_stunnel,
-    start_stunnel,
-    stop_stunnel,
-    stunnel_status,
-)
-
 # Import Client Revocation views
 from .api.client_revocation_views import (
     revoke_client_certificate,
@@ -66,13 +56,6 @@ urlpatterns = [
     path("servers/<int:server_id>/generate-ssh-key/", generate_ssh_key, name="generate-ssh-key"),
     path("servers/<int:server_id>/check-status/", check_server_status, name="check-server-status"),
     path("servers/<int:server_id>/sync-clients/", sync_clients, name="sync-clients"),
-    # Stunnel management endpoints
-    path("servers/<int:server_id>/stunnel/setup/", setup_stunnel, name="setup-stunnel"),
-    path("servers/<int:server_id>/stunnel/configure/", configure_stunnel, name="configure-stunnel"),
-    path("servers/<int:server_id>/stunnel/start/", start_stunnel, name="start-stunnel"),
-    path("servers/<int:server_id>/stunnel/stop/", stop_stunnel, name="stop-stunnel"),
-    path("servers/<int:server_id>/stunnel/restart/", restart_stunnel, name="restart-stunnel"),
-    path("servers/<int:server_id>/stunnel/status/", stunnel_status, name="stunnel-status"),
     # Client management endpoints
     path("servers/<int:server_id>/create-client/", create_client, name="create-client"),
     path(
